@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-container
+    ports:
+      - "3306:3306"
+    networks:
+      - analytics_app_network
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sandboxdb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - "./dbscripts/schema.sql:/docker-entrypoint-initdb.d/1.sql"
+      - "./dbscripts/data.sql:/docker-entrypoint-initdb.d/2.sql"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "--silent" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+  metadata-client:
+    image: analyticsapp/metadata-client
+    build: .
+    container_name: metadata-client-container
+    ports:
+      - "8081:8080"
+    networks:
+      - analytics_app_network
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+networks:
+  analytics_app_network:
+    driver: bridge
+    external: true
